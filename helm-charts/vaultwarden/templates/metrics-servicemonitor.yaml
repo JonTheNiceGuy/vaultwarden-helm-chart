@@ -1,0 +1,20 @@
+{{- if .Values.metrics.enable }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: vwmetrics
+  namespace: prometheus
+spec:
+  selector:
+    matchLabels:
+      "app.kubernetes.io/name": vwmetrics
+      "app.kubernetes.io/component": vwmetrics
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - port: smtpd-exporter
+      path: /metrics
+      interval: 30s
+{{- end }}

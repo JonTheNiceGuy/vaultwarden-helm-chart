@@ -1,0 +1,53 @@
+{{- if and .Values.vaultwarden.pv.storageClassName (ne .Values.vaultwarden.pv.storageClassName "manual") }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "vaultwarden.name" . }}
+spec:
+  accessModes:
+    - {{ .Values.vaultwarden.pv.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.vaultwarden.pv.size }}
+  storageClassName: {{ .Values.vaultwarden.pv.storageClassName }}
+{{- else }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "vaultwarden.name" . }}
+spec:
+  resources:
+    requests:
+      storage: {{ .Values.vaultwarden.pv.size }}
+  accessModes:
+    - {{ .Values.vaultwarden.pv.accessMode }}
+  storageClassName: manual
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ include "vaultwarden.name" . }}
+spec:
+  capacity:
+    storage: {{ .Values.vaultwarden.pv.size }}
+  mountOptions:
+    - nfsvers=4.1
+    - rsize=1048576
+    - wsize=1048576
+    - hard
+    - timeo=600
+    - retrans=2
+    - noresvport
+  volumeMode: Filesystem
+  accessModes:
+    - {{ .Values.vaultwarden.pv.accessMode }}
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  claimRef:
+    kind: PersistentVolumeClaim
+    name: {{ include "vaultwarden.name" . }}
+    namespace: {{ .Release.Namespace }}
+  nfs:
+    path: {{ .Values.vaultwarden.pv.path }}
+    server: {{ .Values.pv.server }}
+{{- end }}

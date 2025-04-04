@@ -1,0 +1,56 @@
+image:
+  pullPolicy: Always
+
+vaultwarden:
+  image:
+    tag: "1.33.2"
+
+pv:
+  server: your.efs.dns.name
+
+ingress:
+  # Set this to a DNS name you control
+  host: vault.example.org
+  class: nginx
+
+backup:
+  image:
+    tag: 068059b30a9ec0b8619f4050a88929f279e4499c
+
+  store:
+    # Set these to your own!
+    kms_arn: alias/applicationbackups
+    s3_bucket: applicationbackups
+    region: us-east-1
+
+sync:
+  image:
+    tag: eab5701a866806547ea08437c2533aefa94a6144  
+
+  ready: true
+  ldap:
+    hostname: "ldap.example.org"
+    rootPath: "dc=ldap,dc=example,dc=org"
+    userFilter: "(memberOf=cn=vaultwarden,ou=groups,dc=ldap,dc=example,dc=org)"
+  pv:
+    storageClassName: nfs
+
+metrics:
+  enable: false
+
+environment:
+  SMTP_HOST: smtp-relay.example.org
+  SMTP_FROM: vaultwarden@example.org
+  SMTP_FROM_NAME: Vaultwarden Service
+  SMTP_SECURITY: "off"
+  SMTP_PORT: "25"
+  ENABLE_WEBSOCKET: "true"
+  SIGNUPS_DOMAINS_WHITELIST: example.org
+  SIGNUPS_VERIFY: "true"
+  EMAIL_CHANGE_ALLOWED: "false"
+  DOMAIN: "https://vault.example.org"
+  ORG_GROUPS_ENABLED: "true"
+  ## https://github.com/dani-garcia/vaultwarden/wiki/Enabling-Mobile-Client-push-notification
+  # PUSH_ENABLED: "true"
+  # PUSH_RELAY_URI: https://api.bitwarden.eu
+  # PUSH_IDENTITY_URI: https://identity.bitwarden.eu

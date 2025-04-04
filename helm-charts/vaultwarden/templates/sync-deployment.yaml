@@ -1,0 +1,70 @@
+{{- if .Values.sync.enable }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sync.fullname" . }}
+  labels:
+    {{- include "sync.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "sync.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.sync.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "sync.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ include "sync.name" . }}
+          securityContext:
+            {{- toYaml .Values.sync.securityContext | nindent 12 }}
+          image: "{{ .Values.sync.image.registry }}/{{ .Values.sync.image.repository }}:{{ .Values.sync.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /usr/bin/setup-sync.sh
+          {{- if .Values.sync.ready }}
+          livenessProbe:
+            initialDelaySeconds: 0
+            periodSeconds: {{ .Values.backup.store.frequency_in_seconds }}
+            timeoutSeconds: {{ .Values.backup.store.timeout_in_seconds }}
+            exec:
+              command:
+                - /usr/bin/run-sync.sh
+          {{- end }}
+          volumeMounts:
+            - mountPath: /etc/bitwarden-sync/
+              name: {{ include "vaultwarden.fullname" . }}
+              readOnly: true
+          resources:
+            {{- toYaml .Values.sync.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: {{ include "vaultwarden.fullname" . }}
+          secret:
+            secretName: {{ include "vaultwarden.fullname" . }}
+            items:
+              - key: auth.env
+                path: auth.env
+{{- end }}

@@ -1,0 +1,199 @@
+image:
+  pullPolicy: IfNotPresent
+
+podSecurityContext:
+  fsGroup: 1000
+
+imagePullSecrets: []
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+pv:
+  server: nfs-server.example.com
+
+vaultwarden:
+  image:
+    registry: docker.io
+    repository: vaultwarden/server
+    tag: "1.33.2"
+  replicas: 2
+  hpa:
+    enabled: true
+    max_replicas: 10
+    cpu: 50
+    memory: 50
+  pv:
+    path: /vaultwarden_data
+    size: 1Gi
+    accessMode: ReadWriteMany
+    storageClassName: manual
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 500m
+      memory: 256Mi
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    capabilities:
+      drop:
+        - ALL
+      add:
+        - NET_BIND_SERVICE
+        - CAP_NET_BIND_SERVICE
+        - CAP_NET_ADMIN
+  podAnnotations: {}
+
+backup:
+  enable: true
+
+  image:
+    registry: ghcr.io
+    repository: jontheniceguy/vaultwarden-backup
+    tag: "latest"
+  podAnnotations: {}
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 500m
+      memory: 256Mi
+  store:
+    kms_arn: alias/main
+    s3_bucket: target
+    region: us-east-1
+    frequency_in_seconds: 300 # 5 Minutes
+    timeout_in_seconds: 180 # 3 Minutes
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    allowPrivilegeEscalation: false
+
+metrics:
+  image:
+    registry: ghcr.io
+    repository: tricked-dev/vwmetrics
+    tag: 71b7637
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 500m
+      memory: 256Mi
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+
+  enable: true
+  metrics: true
+
+sync:
+  image:
+    registry: ghcr.io
+    repository: jontheniceguy/vaultwarden-sync
+    tag: "latest"
+
+  pv:
+    storageClassName: nfs
+    size: 10Mi
+    accessMode: ReadWriteMany
+
+  enable: true
+  ready: false
+  # Type: 0 = LDAP, 1 = Azure, 2 = GSuite, 3 = Okta, 4 = OneLogin
+  type: 0
+
+  users: "true"
+  groups: "true"
+  interval: "5"
+  remove_disabled: "true"
+  overwrite_existing: "false"
+  large_import: "false"
+  use_email_prefix_suffix: "false"
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+
+  podAnnotations: {}
+  resources:
+    limits:
+      cpu: 500m
+      memory: 256Mi
+    requests:
+      cpu: 500m
+      memory: 256Mi
+
+  ldap:
+    # Credentials (Override these!)
+    username: uid=a.user@example.com,ou=users,dc=example,dc=com
+    password: Hunter2!
+    # Common setting changes
+    server: ldap.example.org
+    groups_path: ou=groups,dc=example,dc=com
+    user_filter: "(memberOf=cn=vaultwarden,ou=groups,dc=example,dc=com)"
+    group_filter: "(&(cn=vaultwarden-*))"
+    # Just random settings for your environment
+    ssl: "true"
+    startTls: "false"
+    sslAllowUnauthorized: "false"
+    port: "636"
+    creation_date_attribute: whenChanged
+    revision_date_attribute: whenChanged
+    email_prefix_attribute: sAMAccountName
+    member_attribute: uniqueMember
+    user_object_class: inetOrgPerson
+    group_object_class: groupofUniqueNames
+    user_email_attribute: uid
+    group_name_attribute: cn
+    group_path: OU=Groups
+    user_path: OU=Users
+
+  okta:
+    url: https://example.okta.com
+    token: YourTokenGoesInHere
+
+  azure:
+    key: YourKeyHere
+
+  gsuite:
+    key: YourKeyHere
+
+  onelogin:
+    region: us
+
+  target:
+    base_url: https://vaultwarden.example.org
+    org_id: YourOrgIDGoesHere
+    org_secret: YourOrgSecretGoesHere
+    app_id: YourAppIDGoesHere
+
+ingress:
+  host: vault.example.com
+  class: nginx
+  annotations:
+    ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/secure-backends: "false"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "5"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+
+environment:
+  ROCKET_WORKERS: 20
+  ROCKET_PORT: 1080
+  METRICS_PORT: 3040
+  # These are all values from the config-as-secret.yaml file which populates the environment variables. "true" and "false" must be quoted
+  SIGNUPS_VERIFY: "false"
+  RO_DATABASE_URL:

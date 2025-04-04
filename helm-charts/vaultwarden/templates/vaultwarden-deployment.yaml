@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vaultwarden.fullname" . }}
+  labels:
+    {{- include "vaultwarden.labels" . | nindent 4 }}
+spec:
+{{- if not (default false .Values.vaultwarden.hpa.enabled) }}
+  replicas: {{ .Values.vaultwarden.replicas }}
+{{- end }}
+  selector:
+    matchLabels:
+      {{- include "vaultwarden.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.vaultwarden.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "vaultwarden.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.vaultwarden.securityContext | nindent 12 }}
+          image: "{{ .Values.vaultwarden.image.registry }}/{{ .Values.vaultwarden.image.repository }}:{{ .Values.vaultwarden.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          volumeMounts:
+            - mountPath: /data
+              name: data
+            - mountPath: /etc/vaultwarden/
+              name: {{ include "vaultwarden.fullname" . }}
+              readOnly: true
+          env:
+            - name: ENV_FILE
+              value: /etc/vaultwarden/.env
+            - name: ROCKET_WORKERS
+              value: "{{ .Values.environment.ROCKET_WORKERS }}"
+            - name: ROCKET_PORT
+              value: "{{ default "1080" .Values.environment.ROCKET_PORT }}"
+          ports:
+            - name: http
+              containerPort: {{ default "1080" .Values.environment.ROCKET_PORT }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 300
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            {{- toYaml .Values.vaultwarden.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "vaultwarden.name" . }}
+        - name: {{ include "vaultwarden.fullname" . }}
+          secret:
+            secretName: {{ include "vaultwarden.fullname" . }}
+            items:
+              - key: .env
+                path: .env
+{{- if default false .Values.vaultwarden.hpa.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "vaultwarden.fullname" . }}
+spec:
+  maxReplicas: {{ default 50 .Values.vaultwarden.hpa.max_replicas }}
+  metrics:
+  {{- if .Values.vaultwarden.hpa.cpu }}
+  - resource:
+      name: cpu
+      target:
+        averageUtilization: {{ .Values.vaultwarden.hpa.cpu }}
+        type: Utilization
+    type: Resource
+  {{- end }}
+  {{- if .Values.vaultwarden.hpa.memory }}
+  - resource:
+      name: memory
+      target:
+        averageUtilization: {{ .Values.vaultwarden.hpa.memory }}
+        type: Utilization
+    type: Resource
+  {{- end }}
+  minReplicas: {{ .Values.vaultwarden.replicas  }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "vaultwarden.fullname" . }}
+{{- end }}

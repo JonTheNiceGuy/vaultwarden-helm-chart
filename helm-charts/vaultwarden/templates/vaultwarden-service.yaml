@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "vaultwarden.fullname" . }}
+  labels:
+    {{- include "vaultwarden.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ default "1080" .Values.environment.ROCKET_PORT }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "vaultwarden.selectorLabels" . | nindent 4 }}

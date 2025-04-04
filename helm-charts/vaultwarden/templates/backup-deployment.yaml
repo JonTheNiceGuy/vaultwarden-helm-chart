@@ -1,0 +1,88 @@
+{{- if .Values.backup.enable }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "backup.fullname" . }}
+  labels:
+    {{- include "backup.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "backup.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.backup.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "backup.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      dnsPolicy: Default
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.backup.securityContext | nindent 12 }}
+          image: "{{ .Values.backup.image.registry }}/{{ .Values.backup.image.repository }}:{{ .Values.backup.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          volumeMounts:
+            - mountPath: /data
+              name: data
+              readOnly: true
+            - mountPath: /etc/vaultwarden/
+              name: {{ include "vaultwarden.fullname" . }}
+              readOnly: true
+          env:
+            - name: ENV_FILE
+              value: /etc/vaultwarden/.env
+            - name: KMS_ARN
+              value: {{ .Values.backup.store.kms_arn }}
+            - name: S3_BUCKET
+              value: {{ .Values.backup.store.s3_bucket }}
+            - name: AWS_REGION
+              value: {{ .Values.backup.store.region }}
+
+          command: [ "/bin/sh", "-c", "--" ]
+          args: [ "tail -f /dev/termination-log 2>/dev/null" ]
+
+          livenessProbe:
+            initialDelaySeconds: 0
+            periodSeconds: {{ .Values.backup.store.frequency_in_seconds }}
+            timeoutSeconds: {{ .Values.backup.store.timeout_in_seconds }}
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - /usr/bin/execute_backup.sh 2>&1 | tee -a /dev/termination-log
+          resources:
+            {{- toYaml .Values.backup.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "vaultwarden.name" . }}
+        - name: {{ include "vaultwarden.fullname" . }}
+          secret:
+            secretName: {{ include "vaultwarden.fullname" . }}
+            items:
+              - key: .env
+                path: .env
+{{- end }}

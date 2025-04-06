@@ -12,19 +12,19 @@ spec:
       {{- include "sync.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-    {{- with .Values.sync.podAnnotations }}
+    {{- with (default .Values.podAnnotations .Values.sync.podAnnotations) }}
       annotations:
         {{- toYaml . | nindent 8 }}
     {{- end }}
       labels:
         {{- include "sync.selectorLabels" . | nindent 8 }}
     spec:
-      {{- with .Values.imagePullSecrets }}
+      {{- with (default .Values.imagePullSecrets .Values.sync.imagePullSecrets) }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml (default .Values.podSecurityContext .Values.sync.podSecurityContext) | nindent 8 }}
       containers:
         - name: {{ include "sync.name" . }}
           securityContext:
@@ -48,15 +48,15 @@ spec:
               readOnly: true
           resources:
             {{- toYaml .Values.sync.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
+      {{- with (default .Values.nodeSelector .Values.sync.nodeSelector) }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with (default .Values.affinity .Values.sync.affinity) }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with (default .Values.tolerations .Values.sync.tolerations) }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}

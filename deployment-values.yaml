@@ -6,7 +6,7 @@ vaultwarden:
     tag: "1.33.2"
 
 pv:
-  server: your.efs.dns.name
+  server: your.nfs.dns.name
 
 ingress:
   # Set this to a DNS name you control

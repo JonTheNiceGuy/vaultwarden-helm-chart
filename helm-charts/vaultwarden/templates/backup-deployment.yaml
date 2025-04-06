@@ -33,7 +33,7 @@ spec:
           image: "{{ .Values.backup.image.registry }}/{{ .Values.backup.image.repository }}:{{ .Values.backup.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           volumeMounts:
-            - mountPath: /data
+            - mountPath: {{ default "/data" .Values.environment.DATA_FOLDER }}
               name: data
               readOnly: true
             - mountPath: /etc/vaultwarden/
@@ -83,6 +83,6 @@ spec:
           secret:
             secretName: {{ include "vaultwarden.fullname" . }}
             items:
-              - key: .env
+              - key: backup.env
                 path: .env
 {{- end }}

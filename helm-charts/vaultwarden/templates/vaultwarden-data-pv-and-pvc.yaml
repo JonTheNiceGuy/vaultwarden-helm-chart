@@ -1,4 +1,6 @@
 {{- if and .Values.vaultwarden.pv.storageClassName (ne .Values.vaultwarden.pv.storageClassName "manual") }}
+---
+# Dynamic PVC, fulfilled by the StorageClass (e.g. efs)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -11,6 +13,8 @@ spec:
       storage: {{ .Values.vaultwarden.pv.size }}
   storageClassName: {{ .Values.vaultwarden.pv.storageClassName }}
 {{- else }}
+---
+# Static PVC and PV, usually using static NFS mounts
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -30,14 +34,10 @@ metadata:
 spec:
   capacity:
     storage: {{ .Values.vaultwarden.pv.size }}
+  {{- with (default .Values.pv.mountOptions .Values.vaultwarden.pv.mountOptions) }}
   mountOptions:
-    - nfsvers=4.1
-    - rsize=1048576
-    - wsize=1048576
-    - hard
-    - timeo=600
-    - retrans=2
-    - noresvport
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   volumeMode: Filesystem
   accessModes:
     - {{ .Values.vaultwarden.pv.accessMode }}

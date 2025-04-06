@@ -8,9 +8,11 @@ imagePullSecrets: []
 nodeSelector: {}
 tolerations: []
 affinity: {}
+podAnnotations: {}
 
 pv:
   server: nfs-server.example.com
+  mountOptions: []
 
 vaultwarden:
   image:
@@ -28,6 +30,7 @@ vaultwarden:
     size: 1Gi
     accessMode: ReadWriteMany
     storageClassName: manual
+    mountOptions: 
   resources:
     limits:
       cpu: 500m
@@ -46,7 +49,12 @@ vaultwarden:
         - NET_BIND_SERVICE
         - CAP_NET_BIND_SERVICE
         - CAP_NET_ADMIN
-  podAnnotations: {}
+  podAnnotations: 
+  imagePullSecrets: 
+  nodeSelector: 
+  tolerations: 
+  affinity: 
+  podSecurityContext: 
 
 backup:
   enable: true
@@ -74,6 +82,11 @@ backup:
     runAsUser: 1000
     runAsGroup: 1000
     allowPrivilegeEscalation: false
+  imagePullSecrets: 
+  nodeSelector: 
+  tolerations: 
+  affinity: 
+  podSecurityContext: 
 
 metrics:
   image:
@@ -91,6 +104,12 @@ metrics:
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000
+  podAnnotations: 
+  imagePullSecrets: 
+  nodeSelector: 
+  tolerations: 
+  affinity: 
+  podSecurityContext: 
 
   enable: true
   metrics: true
@@ -132,6 +151,11 @@ sync:
     requests:
       cpu: 500m
       memory: 256Mi
+  imagePullSecrets: 
+  nodeSelector: 
+  tolerations: 
+  affinity: 
+  podSecurityContext: 
 
   ldap:
     # Credentials (Override these!)
@@ -196,4 +220,5 @@ environment:
   METRICS_PORT: 3040
   # These are all values from the config-as-secret.yaml file which populates the environment variables. "true" and "false" must be quoted
   SIGNUPS_VERIFY: "false"
-  RO_DATABASE_URL:
+  RO_DATABASE_URL: 
+  DATA_FOLDER: ""

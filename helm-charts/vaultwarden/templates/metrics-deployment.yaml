@@ -12,7 +12,7 @@ spec:
       {{- include "metrics.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-    {{- with .Values.backup.podAnnotations }}
+    {{- with (default .Values.podAnnotations .Values.backup.podAnnotations) }}
       annotations:
         {{- toYaml . | nindent 8 }}
     {{- end }}
@@ -20,7 +20,7 @@ spec:
         {{- include "metrics.selectorLabels" . | nindent 8 }}
     spec:
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml (default .Values.podSecurityContext .Values.sync.podSecurityContext) | nindent 8 }}
       containers:
         - name: {{ include "metrics.name" . }}
           securityContext:
@@ -31,8 +31,8 @@ spec:
             - name: DATABASE_URL
               valueFrom: 
                 secretKeyRef: 
-                  name: database
-                  key: url
+                  name: {{ include "vaultwarden.fullname" . }}
+                  key: RO_DATABASE
             - name: PORT
               value: "{{ default "3040" .Values.environment.METRICS_PORT }}"
           ports:
@@ -50,15 +50,15 @@ spec:
               port: metrics
           resources:
             {{- toYaml .Values.metrics.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
+      {{- with (default .Values.nodeSelector .Values.sync.nodeSelector) }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with (default .Values.affinity .Values.sync.affinity) }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with (default .Values.tolerations .Values.sync.tolerations) }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
